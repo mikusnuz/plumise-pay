@@ -1,0 +1,22 @@
+{
+  "name": "plumise-pay",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "build:core": "npm run build -w packages/core",
+    "build:react": "npm run build -w packages/react",
+    "build:vue": "npm run build -w packages/vue",
+    "build:node": "npm run build -w packages/node",
+    "dev": "npm run dev -w packages/core",
+    "clean": "rm -rf packages/*/dist"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "esbuild": "^0.27.3"
+  }
+}

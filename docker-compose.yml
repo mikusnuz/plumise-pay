@@ -1,0 +1,18 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: plumise-pay-api
+    network_mode: host
+    restart: unless-stopped
+    environment:
+      - PORT=15560
+      - DB_HOST=127.0.0.1
+      - DB_PORT=15411
+      - DB_USER=plumise-manager
+      - DB_PASS=plumbug!db!1q2w3e4r
+      - DB_NAME=plumise_pay
+      - RPC_URL=http://127.0.0.1:26902
+      - WS_URL=ws://127.0.0.1:26912
+      - HMAC_SECRET=plumise-pay-hmac-secret-v1

@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Plumise Pay SDK Demo</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0f0f1a;
+      color: #f1f5f9;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px;
+    }
+    h1 {
+      font-size: 28px;
+      margin-bottom: 8px;
+      background: linear-gradient(135deg, #7c3aed, #0891b2);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .subtitle { color: #6b7280; margin-bottom: 32px; }
+    .card {
+      background: #1a1a2e;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 16px;
+      padding: 24px;
+      width: 100%;
+      max-width: 480px;
+      margin-bottom: 20px;
+    }
+    .card h2 { font-size: 16px; margin-bottom: 16px; opacity: 0.8; }
+    .field { margin-bottom: 12px; }
+    .field label { display: block; font-size: 13px; color: #9ca3af; margin-bottom: 4px; }
+    .field input, .field select {
+      width: 100%;
+      padding: 10px 12px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
+      color: #f1f5f9;
+      font-size: 14px;
+      outline: none;
+    }
+    .field input:focus, .field select:focus { border-color: #7c3aed; }
+    .btn {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-pay {
+      background: linear-gradient(135deg, #7c3aed, #0891b2);
+      color: white;
+      margin-top: 8px;
+    }
+    .btn-pay:hover { opacity: 0.9; transform: translateY(-1px); }
+    .btn-detect {
+      background: rgba(255,255,255,0.06);
+      color: #e5e7eb;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .btn-detect:hover { background: rgba(255,255,255,0.1); }
+    .log {
+      background: #0a0a15;
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 8px;
+      padding: 12px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      max-height: 300px;
+      overflow-y: auto;
+      line-height: 1.8;
+    }
+    .log-entry { border-bottom: 1px solid rgba(255,255,255,0.04); padding: 2px 0; }
+    .log-time { color: #6b7280; }
+    .log-event { color: #a78bfa; }
+    .log-data { color: #67e8f9; }
+    .log-error { color: #f87171; }
+    .wallet-info { font-size: 13px; color: #9ca3af; margin-top: 8px; }
+    .wallet-info span { color: #67e8f9; }
+  </style>
+</head>
+<body>
+  <h1>Plumise Pay Demo</h1>
+  <p class="subtitle">SDK 기능 테스트 (Testnet)</p>
+
+  <div class="card">
+    <h2>1. 네트워크</h2>
+    <div class="field">
+      <label>네트워크</label>
+      <select id="network">
+        <option value="testnet" selected>Testnet (419561)</option>
+        <option value="mainnet">Mainnet (41956)</option>
+      </select>
+    </div>
+    <div class="wallet-info" id="networkInfo">chainId: <span>419561</span> | RPC: <span>https://node-1.plumise.com/testnet/rpc</span></div>
+  </div>
+
+  <div class="card">
+    <h2>2. 지갑 감지</h2>
+    <button class="btn btn-detect" id="detectBtn">지갑 감지</button>
+    <div class="wallet-info" id="walletInfo"></div>
+  </div>
+
+  <div class="card">
+    <h2>3. 결제 모드</h2>
+    <div class="field">
+      <label>모드</label>
+      <select id="mode">
+        <option value="direct" selected>Direct (클라이언트 직접)</option>
+        <option value="backend">Backend (Stripe-like)</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>테마</label>
+      <select id="theme">
+        <option value="auto">Auto</option>
+        <option value="dark">Dark</option>
+        <option value="light">Light</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>언어</label>
+      <select id="locale">
+        <option value="ko">한국어</option>
+        <option value="en">English</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="card" id="directCard">
+    <h2>4-A. Direct 결제</h2>
+    <div class="field">
+      <label>받는 주소 (to)</label>
+      <input type="text" id="toAddr" value="0x5CEBec6EEeDc9040C72eA44fB1f8d28cD1079b8f" />
+    </div>
+    <div class="field">
+      <label>금액 (PLM)</label>
+      <input type="text" id="amount" value="0.01" />
+    </div>
+    <div class="field">
+      <label>설명</label>
+      <input type="text" id="desc" value="테스트 결제" />
+    </div>
+    <button class="btn btn-pay" id="payBtn">결제하기</button>
+  </div>
+
+  <div class="card" id="backendCard" style="display:none;">
+    <h2>4-B. Backend 결제</h2>
+    <div class="field">
+      <label>API URL</label>
+      <input type="text" id="apiUrl" value="http://localhost:3000" placeholder="http://localhost:3000" />
+    </div>
+    <div class="field">
+      <label>Secret Key</label>
+      <input type="text" id="secretKey" value="" placeholder="sk_live_..." />
+    </div>
+    <div class="field">
+      <label>금액 (PLM)</label>
+      <input type="text" id="backendAmount" value="0.01" />
+    </div>
+    <div class="field">
+      <label>설명</label>
+      <input type="text" id="backendDesc" value="테스트 결제" />
+    </div>
+    <div class="field">
+      <label>받는 주소</label>
+      <input type="text" id="backendRecipient" value="0x5CEBec6EEeDc9040C72eA44fB1f8d28cD1079b8f" />
+    </div>
+    <div class="field">
+      <label>주문 ID (선택)</label>
+      <input type="text" id="backendOrderId" value="" placeholder="order_123" />
+    </div>
+    <button class="btn btn-pay" id="createPaymentBtn">Create Payment</button>
+    <div id="clientSecretInfo" style="display:none;margin-top:12px;">
+      <div class="field">
+        <label>Client Secret</label>
+        <input type="text" id="clientSecretDisplay" readonly style="opacity:0.7;" />
+      </div>
+      <button class="btn btn-pay" id="confirmPaymentBtn">Confirm Payment</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>5. 이벤트 로그</h2>
+    <div class="log" id="log">
+      <div class="log-entry"><span class="log-time">[init]</span> SDK 로드 대기...</div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { PlumisePay } from './plumise-pay.js'
+
+    const NETWORKS = {
+      testnet: {
+        chainId: 419561,
+        rpcUrl: 'https://node-1.plumise.com/testnet/rpc',
+        chainName: 'Plumise Testnet',
+        explorerUrl: 'https://testnet-explorer.plumise.com',
+      },
+      mainnet: {
+        chainId: 41956,
+        rpcUrl: 'https://node-1.plumise.com/rpc',
+        chainName: 'Plumise',
+        explorerUrl: 'https://explorer.plumise.com',
+      },
+    }
+
+    const log = document.getElementById('log')
+    const walletInfoEl = document.getElementById('walletInfo')
+    const networkInfoEl = document.getElementById('networkInfo')
+    const networkSelect = document.getElementById('network')
+    const modeSelect = document.getElementById('mode')
+    const directCard = document.getElementById('directCard')
+    const backendCard = document.getElementById('backendCard')
+
+    function getNetwork() {
+      return NETWORKS[networkSelect.value]
+    }
+
+    modeSelect.addEventListener('change', () => {
+      const isBackend = modeSelect.value === 'backend'
+      directCard.style.display = isBackend ? 'none' : ''
+      backendCard.style.display = isBackend ? '' : 'none'
+      addLog('mode', `Switched to ${modeSelect.value} mode`)
+    })
+
+    networkSelect.addEventListener('change', () => {
+      const net = getNetwork()
+      networkInfoEl.innerHTML = `chainId: <span>${net.chainId}</span> | RPC: <span>${net.rpcUrl}</span>`
+      if (pay) { pay.destroy(); pay = null }
+      addLog('network', `Switched to ${networkSelect.value} (${net.chainId})`)
+    })
+
+    function addLog(event, data, isError = false) {
+      const time = new Date().toLocaleTimeString('ko-KR')
+      const dataStr = typeof data === 'object' ? JSON.stringify(data) : String(data)
+      const cls = isError ? 'log-error' : 'log-data'
+      log.innerHTML += `<div class="log-entry"><span class="log-time">[${time}]</span> <span class="log-event">${event}</span> <span class="${cls}">${dataStr}</span></div>`
+      log.scrollTop = log.scrollHeight
+    }
+
+    let pay = null
+
+    function initPay(extraConfig = {}) {
+      const theme = document.getElementById('theme').value
+      const locale = document.getElementById('locale').value
+      const net = getNetwork()
+
+      if (pay) pay.destroy()
+      pay = new PlumisePay({
+        theme,
+        locale,
+        chainId: net.chainId,
+        rpcUrl: net.rpcUrl,
+        chainName: net.chainName,
+        explorerUrl: net.explorerUrl,
+        ...extraConfig,
+      })
+
+      pay.on('status_change', (d) => addLog('status_change', d))
+      pay.on('wallet_detected', (d) => addLog('wallet_detected', d))
+      pay.on('tx_submitted', (d) => addLog('tx_submitted', d))
+      pay.on('tx_confirmed', (d) => addLog('tx_confirmed', d))
+      pay.on('error', (d) => addLog('error', d, true))
+
+      addLog('init', `PlumisePay created (${networkSelect.value}, theme=${theme}, locale=${locale}${extraConfig.apiUrl ? ', apiUrl=' + extraConfig.apiUrl : ''})`)
+    }
+
+    document.getElementById('detectBtn').addEventListener('click', async () => {
+      if (!pay) initPay()
+      try {
+        const wallet = await pay.getWallet()
+        const info = `type: <span>${wallet.type}</span>`
+          + (wallet.address ? ` | addr: <span>${wallet.address.slice(0,6)}...${wallet.address.slice(-4)}</span>` : '')
+          + (wallet.chainId ? ` | chainId: <span>${wallet.chainId}</span>` : '')
+        walletInfoEl.innerHTML = info
+        addLog('getWallet', wallet)
+      } catch (err) {
+        addLog('getWallet error', err.message, true)
+      }
+    })
+
+    // Direct mode
+    document.getElementById('payBtn').addEventListener('click', async () => {
+      initPay()
+
+      const request = {
+        to: document.getElementById('toAddr').value,
+        amount: document.getElementById('amount').value,
+        description: document.getElementById('desc').value,
+      }
+
+      addLog('requestPayment', request)
+
+      try {
+        const result = await pay.requestPayment(request)
+        addLog('result', result, result.status === 'error')
+      } catch (err) {
+        addLog('error', err.message, true)
+      }
+    })
+
+    // Backend mode - Create Payment
+    let currentClientSecret = null
+
+    document.getElementById('createPaymentBtn').addEventListener('click', async () => {
+      const apiUrl = document.getElementById('apiUrl').value.replace(/\/$/, '')
+      const secretKey = document.getElementById('secretKey').value
+      const amount = document.getElementById('backendAmount').value
+      const description = document.getElementById('backendDesc').value
+      const orderId = document.getElementById('backendOrderId').value
+
+      if (!apiUrl || !secretKey) {
+        addLog('error', 'API URL and Secret Key are required', true)
+        return
+      }
+
+      addLog('createPayment', { apiUrl, amount, description, orderId: orderId || undefined })
+
+      try {
+        const recipientAddress = document.getElementById('backendRecipient').value
+
+        const body = {
+          amount,
+          currency: 'native',
+          recipientAddress,
+          description: description || undefined,
+          orderId: orderId || undefined,
+        }
+
+        const res = await fetch(`${apiUrl}/v1/payments`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${secretKey}`,
+          },
+          body: JSON.stringify(body),
+        })
+
+        if (!res.ok) {
+          const errText = await res.text()
+          throw new Error(`HTTP ${res.status}: ${errText}`)
+        }
+
+        const data = await res.json()
+        addLog('paymentCreated', data)
+
+        currentClientSecret = data.clientSecret
+        document.getElementById('clientSecretDisplay').value = currentClientSecret
+        document.getElementById('clientSecretInfo').style.display = ''
+      } catch (err) {
+        addLog('error', err.message, true)
+      }
+    })
+
+    // Backend mode - Confirm Payment
+    document.getElementById('confirmPaymentBtn').addEventListener('click', async () => {
+      if (!currentClientSecret) {
+        addLog('error', 'No client secret. Create a payment first.', true)
+        return
+      }
+
+      const apiUrl = document.getElementById('apiUrl').value.replace(/\/$/, '')
+      initPay({ apiUrl })
+
+      addLog('confirmPayment', { clientSecret: currentClientSecret })
+
+      try {
+        const result = await pay.confirmPayment(currentClientSecret)
+        addLog('result', result, result.status === 'error')
+      } catch (err) {
+        addLog('error', err.message, true)
+      }
+    })
+
+    addLog('init', 'SDK loaded successfully (Testnet default)')
+  </script>
+</body>
+</html>
